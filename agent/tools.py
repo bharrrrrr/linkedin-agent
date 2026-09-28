@@ -9,6 +9,7 @@ from typing import Any, Optional
 from agents import function_tool
 
 from lib import (
+    active_backend,
     ApifyClient,
     available_models,
     available_templates,
@@ -31,6 +32,20 @@ ROOT = Path(__file__).resolve().parents[1]
 def _json(data: Any) -> str:
     return json.dumps(data, ensure_ascii=False, default=str)
 
+
+
+def _write_backend_status() -> Optional[dict[str, str]]:
+    """Block the legacy arbitrary-command publisher unless explicitly enabled."""
+    if active_backend() == "diy" and os.getenv("LINKEDIN_AGENT_ALLOW_DIY", "0").lower() not in {"1", "true", "yes"}:
+        return {
+            "mode": "error",
+            "message": (
+                "The legacy DIY publisher is disabled in the OpenAI runtime because it can execute "
+                "an arbitrary local command. Use Publora/manual mode, or explicitly set "
+                "LINKEDIN_AGENT_ALLOW_DIY=1 after reviewing the custom poster command."
+            ),
+        }
+    return None
 
 def _manual_read_message() -> dict[str, str]:
     return {
@@ -228,7 +243,11 @@ def publish_linkedin_comment(
     platform_id: Optional[str] = None,
     reaction_type: Optional[str] = None,
 ) -> str:
-    """Publish an approved top-level LinkedIn comment via the configured backend."""
+    """
+    blocked = _write_backend_status()
+    if blocked:
+        return _json(blocked)
+Publish an approved top-level LinkedIn comment via the configured backend."""
     result = publish(
         kind="comment",
         draft_text=draft_text,
@@ -252,7 +271,11 @@ def publish_linkedin_reply(
     platform_id: Optional[str] = None,
     reaction_type: Optional[str] = None,
 ) -> str:
-    """Publish an approved LinkedIn reply using the supplied parent comment URN."""
+    """
+    blocked = _write_backend_status()
+    if blocked:
+        return _json(blocked)
+Publish an approved LinkedIn reply using the supplied parent comment URN."""
     result = publish(
         kind="reply",
         draft_text=draft_text,
@@ -275,7 +298,11 @@ def reshare_linkedin_post(
     parent_urn: Optional[str] = None,
     platform_id: Optional[str] = None,
 ) -> str:
-    """Reshare an approved LinkedIn post with optional commentary."""
+    """
+    blocked = _write_backend_status()
+    if blocked:
+        return _json(blocked)
+Reshare an approved LinkedIn post with optional commentary."""
     result = repost(
         post_url=post_url,
         commentary=commentary,
@@ -290,7 +317,11 @@ def reshare_linkedin_post(
 
 @function_tool(needs_approval=True)
 def cancel_linkedin_scheduled_post(post_group_id: str) -> str:
-    """Cancel an approved/scheduled post before it goes live."""
+    """
+    blocked = _write_backend_status()
+    if blocked:
+        return _json(blocked)
+Cancel an approved/scheduled post before it goes live."""
     from lib import unpublish
 
     result = unpublish(post_group_id=post_group_id)
@@ -307,7 +338,11 @@ def generate_linkedin_image(
     model: Optional[str] = None,
     resolution: str = "1K",
 ) -> str:
-    """Generate a LinkedIn visual through the existing Pixfaro integration."""
+    """
+    blocked = _write_backend_status()
+    if blocked:
+        return _json(blocked)
+Generate a LinkedIn visual through the existing Pixfaro integration."""
     return _json(
         illustrate(prompt, kind=kind, model=model, resolution=resolution)
     )
