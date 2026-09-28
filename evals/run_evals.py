@@ -218,7 +218,7 @@ async def ask_openai(runtime, prompt: str, skill_name: str, timeout: int) -> tup
     try:
         result = await asyncio.wait_for(
             Runner.run(
-                runtime._agents[skill_name],
+                runtime.specialist(skill_name),
                 prompt,
                 max_turns=8,
                 run_config=RunConfig(
@@ -240,6 +240,7 @@ async def ask_openai(runtime, prompt: str, skill_name: str, timeout: int) -> tup
 
 def ask(runtime, prompt: str, skill_name: str, timeout: int) -> tuple[str, str]:
     return asyncio.run(ask_openai(runtime, prompt, skill_name, timeout))
+
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__,
