@@ -114,6 +114,19 @@ def check_environment(report: Report) -> None:
 
 
 # --- credential layers ----------------------------------------------------
+def check_openai(report: Report) -> None:
+    token = os.getenv("OPENAI_API_KEY")
+    if not token:
+        report.add(OFF, "OPENAI_API_KEY", "not set; the OpenAI agent runtime cannot run")
+        return
+
+    report.add(OK, "OPENAI_API_KEY", mask(token))
+    if not token.startswith("sk-"):
+        report.add(WARN, "  key format", "expected an sk- prefix")
+    model = os.getenv("OPENAI_MODEL") or os.getenv("OPENAI_DEFAULT_MODEL") or "gpt-5.6-luna"
+    report.add(OK, "  model", model)
+
+
 
 
 def check_apify(report: Report, offline: bool) -> None:
@@ -345,6 +358,9 @@ def main() -> int:
         report.render(start)
 
     run("Environment", lambda: check_environment(report))
+    run(
+        "OpenAI runtime", lambda: check_openai(report),
+    )
     run(
         "Credentials" + (" (offline: shape only)" if args.offline else ""),
         lambda: check_apify(report, args.offline),
