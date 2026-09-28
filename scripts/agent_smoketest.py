@@ -24,7 +24,7 @@ def main() -> int:
     runtime = LinkedInAgentRuntime()
     skills = discover_skills()
     specialist_names = {
-        handoff.agent.name if hasattr(handoff, "agent") else str(handoff)
+        getattr(getattr(handoff, "agent", handoff), "name", str(handoff))
         for handoff in runtime.agent.handoffs
     }
 
