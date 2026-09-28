@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import os
+from pathlib import Path
 from typing import Any, Optional
 
 from agents import function_tool
@@ -22,6 +23,9 @@ from lib import (
     refine,
     repost,
 )
+
+
+ROOT = Path(__file__).resolve().parents[1]
 
 
 def _json(data: Any) -> str:
@@ -378,8 +382,42 @@ def upload_linkedin_brand_logo(
     path: str,
     name: Optional[str] = None,
 ) -> str:
-    """Upload a brand logo to Pixfaro for future overlays."""
-    return _json(brand_logo(path, name=name))
+    """Upload a brand logo from the repository assets area to Pixfaro."""
+    candidate = Path(path)
+    if not candidate.is_absolute():
+        candidate = ROOT / candidate
+    try:
+        candidate = candidate.resolve()
+        candidate.relative_to(ROOT.resolve())
+    except ValueError:
+        return _json(
+            {
+                "mode": "error",
+                "message": "Logo path must stay inside the linkedin-agent repository.",
+            }
+        )
+    if candidate.suffix.lower() not in {".png", ".jpg", ".jpeg", ".webp"}:
+        return _json(
+            {
+                "mode": "error",
+                "message": "Logo must be a PNG, JPG, JPEG, or WEBP file.",
+            }
+        )
+    if not candidate.is_file():
+        return _json(
+            {
+                "mode": "error",
+                "message": f"Logo file does not exist: {candidate}",
+            }
+        )
+    if candidate.stat().st_size > 1_000_000:
+        return _json(
+            {
+                "mode": "error",
+                "message": "Logo file is larger than the 1 MB Pixfaro upload limit.",
+            }
+        )
+    return _json(brand_logo(str(candidate), name=name))
 
 
 READ_TOOLS = [
