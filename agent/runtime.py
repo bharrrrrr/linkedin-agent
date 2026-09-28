@@ -20,6 +20,8 @@ STATE_DIR = Path(os.getenv("LINKEDIN_AGENT_STATE_DIR", ".agent-state"))
 SESSION_DB = Path(
     os.getenv("LINKEDIN_AGENT_SESSION_DB", str(STATE_DIR / "sessions.sqlite3"))
 )
+MAX_TURNS = int(os.getenv("LINKEDIN_AGENT_MAX_TURNS", "20"))
+TRACING_ENABLED = os.getenv("LINKEDIN_AGENT_TRACING", "0").lower() in {"1", "true", "yes"}
 
 
 @dataclass(frozen=True)
@@ -66,6 +68,7 @@ class LinkedInAgentRuntime:
                 handoff_description=spec.description,
                 instructions=load_skill_instructions(spec.name),
                 model=self.model,
+                model_settings=ModelSettings(parallel_tool_calls=False),
                 tools=ALL_TOOLS,
             )
 
@@ -91,10 +94,18 @@ Safety:
             name="linkedin-agent-router",
             instructions=triage_instructions,
             model=self.model,
+            model_settings=ModelSettings(parallel_tool_calls=False),
             handoffs=list(specialists.values()),
         )
         specialists["linkedin-agent-router"] = triage
         return specialists
+
+    def specialist(self, name: str) -> Agent:
+        """Return a named skill agent for evaluation or trusted orchestration hosts."""
+        try:
+            return self._agents[name]
+        except KeyError as exc:
+            raise KeyError(f"Unknown LinkedIn skill agent: {name}") from exc
 
     @property
     def agent(self) -> Agent:
@@ -114,6 +125,12 @@ Safety:
             self.agent,
             prompt,
             session=self.session(session_id),
+            max_turns=MAX_TURNS,
+            run_config=RunConfig(
+                tracing_disabled=not TRACING_ENABLED,
+                trace_include_sensitive_data=False,
+                workflow_name="LinkedIn Agent",
+            ),
         )
         state = result.to_state() if result.interruptions else None
         return AgentRun(result=result, session_id=session_id, state=state)
@@ -137,6 +154,12 @@ Safety:
             self.agent,
             run.state,
             session=self.session(run.session_id),
+            max_turns=MAX_TURNS,
+            run_config=RunConfig(
+                tracing_disabled=not TRACING_ENABLED,
+                trace_include_sensitive_data=False,
+                workflow_name="LinkedIn Agent",
+            ),
         )
         state = result.to_state() if result.interruptions else None
         return AgentRun(result=result, session_id=run.session_id, state=state)
