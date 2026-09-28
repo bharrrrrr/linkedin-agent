@@ -1,7 +1,3 @@
-<p align="center">
-  <img src="assets/linkedin-skills-hero.png" alt="12 Claude Code and Codex skills for LinkedIn marketing — open source, MIT licensed" width="900" />
-</p>
-
 # LinkedIn Marketing Skills for Claude Code and Codex
 
 <p align="center">
