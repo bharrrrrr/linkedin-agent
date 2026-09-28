@@ -1,4 +1,4 @@
-# LinkedIn Marketing Skills for Claude Code and Codex
+# LinkedIn Marketing Skills + OpenAI Agent Runtime
 
 <p align="center">
   <img src="https://img.shields.io/github/v/release/sergebulaev/linkedin-skills?color=1E40AF&label=release" alt="Latest release">
@@ -10,7 +10,7 @@
   <img src="https://img.shields.io/badge/PRs-welcome-F59E0B.svg" alt="PRs Welcome">
 </p>
 
-**Claude skills for LinkedIn.** 12 Claude Code and Codex skills that write LinkedIn posts, comments, and replies in your voice. They draft content, strip AI tells, and wait for your approval before anything gets published. No coding required.
+**LinkedIn skills for agents.** The repository contains 12 reusable skills plus a native OpenAI Agents SDK runtime. Claude Code and Codex compatibility remains available, while the OpenAI runtime can run the same skill library locally without Claude.
 
 > **On another platform too?** The same team ships matching marketing skill bundles for [X (Twitter)](https://github.com/sergebulaev/x-skills) · [Instagram](https://github.com/sergebulaev/instagram-skills) · [YouTube](https://github.com/sergebulaev/youtube-skills) · [TikTok](https://github.com/sergebulaev/tiktok-skills) · [Threads](https://github.com/sergebulaev/threads-skills) · [Facebook](https://github.com/sergebulaev/facebook-skills). Same voice engine, same approve-before-publish flow.
 
