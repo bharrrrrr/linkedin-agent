@@ -14,6 +14,63 @@
 
 > **On another platform too?** The same team ships matching marketing skill bundles for [X (Twitter)](https://github.com/sergebulaev/x-skills) · [Instagram](https://github.com/sergebulaev/instagram-skills) · [YouTube](https://github.com/sergebulaev/youtube-skills) · [TikTok](https://github.com/sergebulaev/tiktok-skills) · [Threads](https://github.com/sergebulaev/threads-skills) · [Facebook](https://github.com/sergebulaev/facebook-skills). Same voice engine, same approve-before-publish flow.
 
+## OpenAI Agent runtime (local)
+
+This repository now includes a native OpenAI Agents SDK runtime. The existing 12 LinkedIn skills remain the source of truth; the OpenAI agent loads the selected skill and its references, then calls the existing Python integrations for LinkedIn reads, publishing, and images.
+
+The runtime uses specialist agents for the 12 skills, local SQLite session memory, and SDK human-in-the-loop approval for publishing, reshares, cancellation, and paid image actions. The Agents SDK uses the Responses API for OpenAI models and supports resumable approval state.
+
+### Setup
+
+```bash
+python -m venv .venv
+# Windows PowerShell
+.venv\Scripts\Activate.ps1
+# macOS/Linux
+# source .venv/bin/activate
+
+pip install -r requirements.txt
+copy .env.example .env  # Windows
+# cp .env.example .env  # macOS/Linux
+```
+
+Set `OPENAI_API_KEY` in `.env`, then run:
+
+```bash
+python scripts/run_agent.py
+```
+
+Or run one request directly:
+
+```bash
+python scripts/run_agent.py "Write a LinkedIn post about my cybersecurity internship."
+```
+
+The runtime routes requests to the most specific skill. Read-only tools use Apify when `APIFY_TOKEN` is configured; otherwise the agent asks you to paste source text. Write tools remain approval-gated and then use the existing Publora/manual/DIY backend selector.
+
+`OPENAI_MODEL` can override the model used by the runtime. The SDK currently defaults to `gpt-5.6-luna` when no explicit model is supplied; set an explicit model in `.env` when you want a different model.
+
+### Runtime architecture
+
+```text
+User
+  ↓
+OpenAI LinkedIn Agent router
+  ↓
+12 specialist skill agents
+  ↓
+SKILL.md + referenced markdown
+  ↓
+OpenAI model reasoning / tool selection
+  ↓
+Existing deterministic Python tools
+  ├── Apify   → LinkedIn read data
+  ├── Publora → LinkedIn write actions
+  └── Pixfaro → image generation/rendering
+```
+
+The approval boundary is enforced by the Agents SDK itself, rather than only by prompt conventions. A paused run can be serialized and resumed by the host application, which is the foundation for the future web UI.
+
 ## Install
 
 Pick whichever way you use Claude Code or Codex:
