@@ -6,7 +6,7 @@ import os
 from pathlib import Path
 from typing import Any
 
-from agents import Agent, Runner, RunState, SQLiteSession
+from agents import Agent, ModelSettings, RunConfig, Runner, RunState, SQLiteSession
 
 from .skill_loader import discover_skills, load_skill_instructions, skill_catalog_text
 from .tools import ALL_TOOLS
