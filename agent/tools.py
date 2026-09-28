@@ -221,6 +221,9 @@ def publish_linkedin_post(
     media_urls: Optional[list[str]] = None,
 ) -> str:
     """Publish or schedule an approved LinkedIn post via the configured backend."""
+    blocked = _write_backend_status()
+    if blocked:
+        return _json(blocked)
     result = publish(
         kind="post",
         draft_text=draft_text,
@@ -243,11 +246,10 @@ def publish_linkedin_comment(
     platform_id: Optional[str] = None,
     reaction_type: Optional[str] = None,
 ) -> str:
-    """
+    """Publish an approved top-level LinkedIn comment via the configured backend."""
     blocked = _write_backend_status()
     if blocked:
         return _json(blocked)
-Publish an approved top-level LinkedIn comment via the configured backend."""
     result = publish(
         kind="comment",
         draft_text=draft_text,
@@ -271,11 +273,10 @@ def publish_linkedin_reply(
     platform_id: Optional[str] = None,
     reaction_type: Optional[str] = None,
 ) -> str:
-    """
+    """Publish an approved LinkedIn reply using the supplied parent comment URN."""
     blocked = _write_backend_status()
     if blocked:
         return _json(blocked)
-Publish an approved LinkedIn reply using the supplied parent comment URN."""
     result = publish(
         kind="reply",
         draft_text=draft_text,
@@ -298,11 +299,10 @@ def reshare_linkedin_post(
     parent_urn: Optional[str] = None,
     platform_id: Optional[str] = None,
 ) -> str:
-    """
+    """Reshare an approved LinkedIn post with optional commentary."""
     blocked = _write_backend_status()
     if blocked:
         return _json(blocked)
-Reshare an approved LinkedIn post with optional commentary."""
     result = repost(
         post_url=post_url,
         commentary=commentary,
@@ -317,11 +317,10 @@ Reshare an approved LinkedIn post with optional commentary."""
 
 @function_tool(needs_approval=True)
 def cancel_linkedin_scheduled_post(post_group_id: str) -> str:
-    """
+    """Cancel an approved/scheduled post before it goes live."""
     blocked = _write_backend_status()
     if blocked:
         return _json(blocked)
-Cancel an approved/scheduled post before it goes live."""
     from lib import unpublish
 
     result = unpublish(post_group_id=post_group_id)
@@ -338,11 +337,7 @@ def generate_linkedin_image(
     model: Optional[str] = None,
     resolution: str = "1K",
 ) -> str:
-    """
-    blocked = _write_backend_status()
-    if blocked:
-        return _json(blocked)
-Generate a LinkedIn visual through the existing Pixfaro integration."""
+    """Generate a LinkedIn visual through the existing Pixfaro integration."""
     return _json(
         illustrate(prompt, kind=kind, model=model, resolution=resolution)
     )
@@ -399,7 +394,7 @@ def render_linkedin_card(
     template: str,
     slots: dict[str, Any],
     size: Optional[str] = None,
-    style: Optional[Any] = None,
+    style: Optional[dict[str, Any]] = None,
 ) -> str:
     """Render a generic Pixfaro design template."""
     return _json(
