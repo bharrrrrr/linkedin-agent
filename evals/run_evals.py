@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Do the skills actually do what they claim?
+"""Evaluate the OpenAI LinkedIn agent against deterministic skill fixtures.
 
     python3 evals/run_evals.py              # every case
     python3 evals/run_evals.py --case reply-parent
     python3 evals/run_evals.py --list
 
-The tests in `tests/` check the plumbing and the documents. Nothing checks the
+The tests in `tests/` check the plumbing and the documents. This runner checks the
 thing the bundle actually is: 7,000 lines of instructions an agent follows. This
 does, by running the agent against a fixture and grading what comes back.
 
@@ -16,17 +16,17 @@ skills ask you to paste, so this exercises the manual flow end to end.
 Graders are deterministic and narrow on purpose. They check claims that have a
 right answer — the parentComment for a nested reply, whether a scrubbed draft
 kept the user's real numbers — not whether the prose is any good. A grader that
-needs taste is a grader that will drift.
+needs taste would drift.
 
-Costs one model call per case.
 """
 from __future__ import annotations
 
 import argparse
+import asyncio
 import json
+import os
 import pathlib
 import re
-import subprocess
 import sys
 import time
 
@@ -193,6 +193,14 @@ def case_engagers_no_fabrication():
     return prompt, grade
 
 
+SKILL_BY_CASE = {
+    "reply-parent": "linkedin-reply-handler",
+    "reply-no-invention": "linkedin-reply-handler",
+    "hook-formula": "linkedin-hook-extractor",
+    "humanizer-facts": "linkedin-humanizer",
+    "engagers-real": "linkedin-engager-analytics",
+}
+
 CASES = {
     "reply-parent": ("linkedin-reply-handler: the 2-level flattening rule", case_reply_parent),
     "reply-no-invention": ("linkedin-reply-handler: invents no participants", case_reply_no_invention),
@@ -203,21 +211,35 @@ CASES = {
 
 
 # ----------------------------------------------------------------- runner ---
-def ask(prompt: str, timeout: int) -> tuple[str, str]:
-    """Run the agent headless from the repo root, so .claude/skills is found."""
-    try:
-        result = subprocess.run(
-            ["claude", "-p", prompt, "--output-format", "text"],
-            cwd=ROOT, capture_output=True, text=True, timeout=timeout,
-        )
-    except FileNotFoundError:
-        return "", "the `claude` CLI is not on PATH"
-    except subprocess.TimeoutExpired:
-        return "", f"no answer within {timeout}s"
-    if result.returncode != 0:
-        return "", (result.stderr or result.stdout).strip().splitlines()[-1][:90]
-    return result.stdout, ""
+async def ask_openai(runtime, prompt: str, skill_name: str, timeout: int) -> tuple[str, str]:
+    """Run one specialist through the OpenAI Agents SDK."""
+    from agents import RunConfig, Runner
 
+    try:
+        result = await asyncio.wait_for(
+            Runner.run(
+                runtime._agents[skill_name],
+                prompt,
+                max_turns=8,
+                run_config=RunConfig(
+                    tracing_disabled=True,
+                    trace_include_sensitive_data=False,
+                    workflow_name="LinkedIn Agent Eval",
+                ),
+            ),
+            timeout=timeout,
+        )
+    except asyncio.TimeoutError:
+        return "", f"no answer within {timeout}s"
+    except Exception as exc:
+        return "", f"{type(exc).__name__}: {exc}"
+    if result.interruptions:
+        return "", "unexpected approval interruption during evaluation"
+    return result.final_output, ""
+
+
+def ask(runtime, prompt: str, skill_name: str, timeout: int) -> tuple[str, str]:
+    return asyncio.run(ask_openai(runtime, prompt, skill_name, timeout))
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__,
@@ -239,13 +261,20 @@ def main() -> int:
         print(f"no such case: {unknown}. --list to see them all")
         return 2
 
-    print(f"{BOLD}Skill behaviour{OFF}  ({len(selected)} cases, one model call each)\n")
+    if not os.getenv("OPENAI_API_KEY"):
+        print("OPENAI_API_KEY is not set. Export it or add it to .env before running evaluations.")
+        return 2
+
+    from agent.runtime import LinkedInAgentRuntime
+    runtime = LinkedInAgentRuntime()
+    print(f"{BOLD}Skill behaviour{OFF}  ({len(selected)} cases)\n")
     transcripts, failures = {}, 0
     for key in selected:
         title, build = CASES[key]
         prompt, grade = build()
         started = time.time()
-        output, error = ask(prompt, args.timeout)
+        skill_name = SKILL_BY_CASE[key]
+        output, error = ask(runtime, prompt, skill_name, args.timeout)
         transcripts[key] = {"prompt": prompt, "output": output, "error": error}
         if error:
             print(f"  [{YELLOW}skip{OFF}] {title:<52} {error}")
