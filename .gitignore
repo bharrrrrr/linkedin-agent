@@ -13,6 +13,9 @@ marketing/
 # local skill testing scratch area
 testing/
 
+# local OpenAI agent sessions and resumable approval state
+.agent-state/
+
 
 # Playwright MCP session artifacts
 .playwright-mcp/
